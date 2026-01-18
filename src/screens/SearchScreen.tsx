@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, TextInput, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSearchNameDays } from '../hooks/useNameDays';
-import { Search } from 'lucide-react-native';
+import { Search, Heart } from 'lucide-react-native';
 import { useSettings } from '../context/SettingsContext';
+import { useFavorites } from '../context/FavoritesContext';
 
 const GREEK_BLUE = '#0D5EAF';
 
@@ -11,6 +12,7 @@ const SearchScreen = () => {
   const [query, setQuery] = useState('');
   const { data, isLoading, refetch, isFetched } = useSearchNameDays(query, false);
   const { isDarkMode, language } = useSettings();
+  const { addFavorite, removeFavorite, isFavorite } = useFavorites();
 
   const bgColor = isDarkMode ? '#111827' : '#fff';
   const textColor = isDarkMode ? '#f9fafb' : '#111827';
@@ -19,12 +21,12 @@ const SearchScreen = () => {
   const inputBg = isDarkMode ? '#374151' : '#f9fafb';
   const borderColor = isDarkMode ? '#4b5563' : '#d1d5db';
 
-  // Labels are now derived fresh each render based on current language
   const getLabels = () => ({
     title: language === 'el' ? 'Αναζήτηση' : 'Search',
     placeholder: language === 'el' ? 'Αναζήτηση ονόματος...' : 'Search for a name...',
     noResults: language === 'el' ? 'Δεν βρέθηκαν αποτελέσματα για' : 'No results found for',
     also: language === 'el' ? 'Επίσης:' : 'Also:',
+    addFav: language === 'el' ? 'Προσθήκη στα αγαπημένα' : 'Add to favorites',
   });
 
   const labels = getLabels();
@@ -35,15 +37,43 @@ const SearchScreen = () => {
     }
   };
 
-  // Use a renderItem function that reads labels at render time
+  const toggleFavorite = (name: string) => {
+    if (isFavorite(name)) {
+      removeFavorite(name);
+    } else {
+      addFavorite(name);
+    }
+  };
+
   const renderResultItem = ({ item }: { item: any }) => {
     const currentLabels = getLabels();
+    const searchedName = query.trim();
+    const isNameFavorite = isFavorite(searchedName);
+    
     return (
       <View style={[styles.resultCard, { backgroundColor: cardBg, borderColor: isDarkMode ? '#374151' : '#f3f4f6' }]}>
-        <Text style={styles.resultDate}>{item.date_str}</Text>
+        <View style={styles.cardHeader}>
+          <Text style={styles.resultDate}>{item.date_str}</Text>
+          <TouchableOpacity onPress={() => toggleFavorite(searchedName)} style={styles.favoriteButton}>
+            <Heart 
+              color={isNameFavorite ? '#ef4444' : subtextColor} 
+              fill={isNameFavorite ? '#ef4444' : 'transparent'} 
+              size={22} 
+            />
+          </TouchableOpacity>
+        </View>
         <Text style={[styles.resultDescription, { color: isDarkMode ? '#d1d5db' : '#4b5563' }]}>{item.saint_description}</Text>
         {item.related_names && item.related_names.length > 0 && (
-          <Text style={[styles.relatedNames, { color: subtextColor }]}>{currentLabels.also} {item.related_names.join(', ')}</Text>
+          <View style={styles.relatedContainer}>
+            <Text style={[styles.relatedNames, { color: subtextColor }]}>{currentLabels.also} </Text>
+            {item.related_names.map((name: string, idx: number) => (
+              <TouchableOpacity key={idx} onPress={() => toggleFavorite(name)} style={styles.relatedNameButton}>
+                <Text style={[styles.relatedNameText, { color: isFavorite(name) ? '#ef4444' : subtextColor }]}>
+                  {name}{idx < item.related_names.length - 1 ? ', ' : ''}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
       </View>
     );
@@ -75,7 +105,7 @@ const SearchScreen = () => {
 
         <FlatList 
             data={data}
-            extraData={language}
+            extraData={[language, query]}
             keyExtractor={(item, index) => `${item.date_str}-${index}`}
             renderItem={renderResultItem}
         />
@@ -128,16 +158,35 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
   },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   resultDate: {
     color: GREEK_BLUE,
     fontWeight: 'bold',
     fontSize: 18,
-    marginBottom: 4,
+  },
+  favoriteButton: {
+    padding: 4,
   },
   resultDescription: {
     marginBottom: 8,
   },
+  relatedContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
   relatedNames: {
+    fontSize: 13,
+  },
+  relatedNameButton: {
+    padding: 2,
+  },
+  relatedNameText: {
     fontSize: 13,
   },
 });

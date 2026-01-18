@@ -15,6 +15,8 @@
     "@tanstack/react-query": "^5.90.18",
     "axios": "^1.13.2",
     "expo": "~54.0.31",
+    "expo-device": "~8.0.10",
+    "expo-notifications": "~0.32.16",
     "expo-status-bar": "~3.0.9",
     "lucide-react-native": "^0.562.0",
     "nativewind": "^4.2.1",

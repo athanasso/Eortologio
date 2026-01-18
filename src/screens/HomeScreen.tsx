@@ -3,14 +3,17 @@ import { View, Text, ScrollView, ActivityIndicator, StyleSheet } from 'react-nat
 import { useTodayNameDays } from '../hooks/useNameDays';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSettings } from '../context/SettingsContext';
-import { Calendar as CalendarIcon } from 'lucide-react-native';
+import { useFavorites } from '../context/FavoritesContext';
+import { Calendar as CalendarIcon, Heart, Star } from 'lucide-react-native';
 
 const GREEK_BLUE = '#0D5EAF';
 const HOLIDAY_RED = '#dc2626';
+const FAVORITE_GOLD = '#f59e0b';
 
 const HomeScreen = () => {
   const { data, isLoading, error } = useTodayNameDays();
   const { isDarkMode, language } = useSettings();
+  const { favorites, isFavorite } = useFavorites();
 
   const bgColor = isDarkMode ? '#111827' : '#fff';
   const textColor = isDarkMode ? '#f9fafb' : '#111827';
@@ -26,6 +29,7 @@ const HomeScreen = () => {
     noHolidays: language === 'el' ? 'Δεν υπάρχουν αργίες σήμερα.' : 'No holidays today.',
     loading: language === 'el' ? 'Φόρτωση...' : 'Loading...',
     error: language === 'el' ? 'Αποτυχία φόρτωσης' : 'Failed to load data',
+    yourFavorites: language === 'el' ? 'Τα αγαπημένα σου γιορτάζουν!' : 'Your favorites are celebrating!',
   };
 
   if (isLoading) {
@@ -45,6 +49,10 @@ const HomeScreen = () => {
   }
 
   const hasHolidays = data?.other_info && data.other_info.length > 0;
+  
+  // Find which favorites are celebrating today
+  const celebratingFavorites = data?.celebrating_names.filter(name => isFavorite(name)) || [];
+  const hasCelebratingFavorites = celebratingFavorites.length > 0;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
@@ -56,7 +64,24 @@ const HomeScreen = () => {
             </Text>
         </View>
 
-        {/* Holidays Section - Show prominently if there are holidays */}
+        {/* Favorites Celebrating Today */}
+        {hasCelebratingFavorites && (
+          <View style={styles.favoritesCard}>
+            <View style={styles.favoritesHeader}>
+              <Star color="#fff" fill="#fff" size={20} />
+              <Text style={styles.favoritesTitle}>{labels.yourFavorites}</Text>
+            </View>
+            <View style={styles.namesContainer}>
+              {celebratingFavorites.map((name, index) => (
+                <View key={index} style={styles.favoriteBadge}>
+                  <Text style={styles.favoriteNameText}>{name}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Holidays Section */}
         {hasHolidays && (
           <View style={styles.holidayCard}>
             <View style={styles.holidayHeader}>
@@ -76,7 +101,8 @@ const HomeScreen = () => {
             ) : (
                 <View style={styles.namesContainer}>
                     {data?.celebrating_names.map((name, index) => (
-                        <View key={index} style={styles.nameBadge}>
+                        <View key={index} style={[styles.nameBadge, isFavorite(name) && styles.favoriteName]}>
+                            {isFavorite(name) && <Heart color="#fff" fill="#fff" size={12} style={{ marginRight: 4 }} />}
                             <Text style={styles.nameText}>{name}</Text>
                         </View>
                     ))}
@@ -121,6 +147,39 @@ const styles = StyleSheet.create({
   headerDate: {
     fontSize: 18,
     marginTop: 4,
+  },
+  favoritesCard: {
+    backgroundColor: FAVORITE_GOLD,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  favoritesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  favoritesTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  favoriteBadge: {
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  favoriteNameText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
   },
   holidayCard: {
     backgroundColor: HOLIDAY_RED,
@@ -181,6 +240,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  favoriteName: {
+    backgroundColor: 'rgba(245, 158, 11, 0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
   },
   nameText: {
     color: '#fff',

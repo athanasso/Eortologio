@@ -4,8 +4,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import HomeScreen from '../screens/HomeScreen';
 import CalendarScreen from '../screens/CalendarScreen';
 import SearchScreen from '../screens/SearchScreen';
+import FavoritesScreen from '../screens/FavoritesScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-import { Home, Calendar, Search, Settings } from 'lucide-react-native';
+import { Home, Calendar, Search, Heart, Settings } from 'lucide-react-native';
 import { useSettings } from '../context/SettingsContext';
 
 const Tab = createBottomTabNavigator();
@@ -21,6 +22,7 @@ const RootNavigator = () => {
     today: language === 'el' ? 'Σήμερα' : 'Today',
     calendar: language === 'el' ? 'Ημερολόγιο' : 'Calendar',
     search: language === 'el' ? 'Αναζήτηση' : 'Search',
+    favorites: language === 'el' ? 'Αγαπημένα' : 'Favorites',
     settings: language === 'el' ? 'Ρυθμίσεις' : 'Settings',
   };
 
@@ -63,6 +65,14 @@ const RootNavigator = () => {
             options={{
                 tabBarLabel: labels.search,
                 tabBarIcon: ({ color }) => <Search color={color} size={24} />
+            }}
+        />
+        <Tab.Screen 
+            name="Favorites" 
+            component={FavoritesScreen} 
+            options={{
+                tabBarLabel: labels.favorites,
+                tabBarIcon: ({ color }) => <Heart color={color} size={24} />
             }}
         />
         <Tab.Screen 
