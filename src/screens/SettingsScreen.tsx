@@ -1,29 +1,25 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, Switch, TouchableOpacity, StyleSheet, ScrollView, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSettings } from '../context/SettingsContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { Moon, Sun, Globe, Info, ExternalLink, Github, Heart, Bell, Trash2 } from 'lucide-react-native';
-
-const GREEK_BLUE = '#0D5EAF';
+import { COLORS, getThemeColors } from '../constants/theme';
 
 const SettingsScreen = () => {
-  const { language, setLanguage, theme, setTheme, isDarkMode, notificationsEnabled, setNotificationsEnabled, notificationTiming, setNotificationTiming } = useSettings();
+  const { language, setLanguage, setTheme, isDarkMode, notificationsEnabled, setNotificationsEnabled } = useSettings();
   const { favorites, clearAllFavorites } = useFavorites();
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setTheme(isDarkMode ? 'light' : 'dark');
-  };
+  }, [isDarkMode, setTheme]);
 
-  const bgColor = isDarkMode ? '#111827' : '#fff';
-  const textColor = isDarkMode ? '#f9fafb' : '#111827';
-  const cardBg = isDarkMode ? '#1f2937' : '#f3f4f6';
-  const subtextColor = isDarkMode ? '#9ca3af' : '#6b7280';
+  const theme = getThemeColors(isDarkMode);
 
   const currentYear = new Date().getFullYear();
   const copyrightYears = currentYear > 2026 ? `2026-${currentYear}` : '2026';
 
-  const labels = {
+  const labels = useMemo(() => ({
     title: language === 'el' ? 'Ρυθμίσεις' : 'Settings',
     appearance: language === 'el' ? 'ΕΜΦΑΝΙΣΗ' : 'APPEARANCE',
     darkMode: language === 'el' ? 'Σκούρο Θέμα' : 'Dark Mode',
@@ -31,11 +27,6 @@ const SettingsScreen = () => {
     language: language === 'el' ? 'Γλώσσα' : 'Language',
     notifications: language === 'el' ? 'ΕΙΔΟΠΟΙΗΣΕΙΣ' : 'NOTIFICATIONS',
     enableNotifications: language === 'el' ? 'Ειδοποιήσεις' : 'Notifications',
-    notifyBefore: language === 'el' ? 'Πότε να ειδοποιηθώ' : 'When to notify',
-    sameDay: language === 'el' ? 'Την ημέρα' : 'Same day',
-    oneDayBefore: language === 'el' ? '1 μέρα πριν' : '1 day before',
-    twoDaysBefore: language === 'el' ? '2 μέρες πριν' : '2 days before',
-    threeDaysBefore: language === 'el' ? '3 μέρες πριν' : '3 days before',
     favorites: language === 'el' ? 'ΑΓΑΠΗΜΕΝΑ' : 'FAVORITES',
     clearFavorites: language === 'el' ? 'Διαγραφή όλων' : 'Clear all favorites',
     clearConfirm: language === 'el' ? 'Σίγουρα θέλετε να διαγράψετε όλα τα αγαπημένα;' : 'Are you sure you want to delete all favorites?',
@@ -47,16 +38,12 @@ const SettingsScreen = () => {
     gitRepo: language === 'el' ? 'Αποθετήριο GitHub' : 'GitHub Repository',
     credits: language === 'el' ? 'ΕΥΧΑΡΙΣΤΙΕΣ' : 'CREDITS',
     apiCredits: language === 'el' ? 'API: iliasdev' : 'API: iliasdev',
-  };
+    notifyHint: language === 'el' 
+      ? 'Ρυθμίστε πότε θα ειδοποιηθείτε για κάθε αγαπημένο στην καρτέλα Αγαπημένα' 
+      : 'Set when to be notified for each favorite in the Favorites tab',
+  }), [language]);
 
-  const timingOptions = [
-    { value: 0, label: labels.sameDay },
-    { value: 1, label: labels.oneDayBefore },
-    { value: 2, label: labels.twoDaysBefore },
-    { value: 3, label: labels.threeDaysBefore },
-  ];
-
-  const handleClearFavorites = () => {
+  const handleClearFavorites = useCallback(() => {
     Alert.alert(
       labels.clearFavorites,
       labels.clearConfirm,
@@ -65,37 +52,37 @@ const SettingsScreen = () => {
         { text: labels.delete, style: 'destructive', onPress: () => clearAllFavorites() },
       ]
     );
-  };
+  }, [labels, clearAllFavorites]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView style={styles.content}>
-        <Text style={[styles.title, { color: textColor }]}>{labels.title}</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{labels.title}</Text>
 
         {/* Appearance Section */}
-        <Text style={[styles.sectionTitle, { color: subtextColor }]}>{labels.appearance}</Text>
-        <View style={[styles.card, { backgroundColor: cardBg }]}>
+        <Text style={[styles.sectionTitle, { color: theme.subtext }]}>{labels.appearance}</Text>
+        <View style={[styles.card, { backgroundColor: theme.card }]}>
           <View style={styles.row}>
             <View style={styles.rowLeft}>
-              {isDarkMode ? <Moon color={textColor} size={22} /> : <Sun color={textColor} size={22} />}
-              <Text style={[styles.rowLabel, { color: textColor }]}>{labels.darkMode}</Text>
+              {isDarkMode ? <Moon color={theme.text} size={22} /> : <Sun color={theme.text} size={22} />}
+              <Text style={[styles.rowLabel, { color: theme.text }]}>{labels.darkMode}</Text>
             </View>
             <Switch
               value={isDarkMode}
               onValueChange={toggleTheme}
-              trackColor={{ false: '#d1d5db', true: GREEK_BLUE }}
+              trackColor={{ false: '#d1d5db', true: COLORS.greekBlue }}
               thumbColor="#fff"
             />
           </View>
         </View>
 
         {/* Language Section */}
-        <Text style={[styles.sectionTitle, { color: subtextColor }]}>{labels.languageSection}</Text>
-        <View style={[styles.card, { backgroundColor: cardBg }]}>
+        <Text style={[styles.sectionTitle, { color: theme.subtext }]}>{labels.languageSection}</Text>
+        <View style={[styles.card, { backgroundColor: theme.card }]}>
           <View style={styles.row}>
             <View style={styles.rowLeft}>
-              <Globe color={textColor} size={22} />
-              <Text style={[styles.rowLabel, { color: textColor }]}>{labels.language}</Text>
+              <Globe color={theme.text} size={22} />
+              <Text style={[styles.rowLabel, { color: theme.text }]}>{labels.language}</Text>
             </View>
           </View>
           <View style={styles.languageButtons}>
@@ -119,17 +106,17 @@ const SettingsScreen = () => {
         </View>
 
         {/* Notifications Section */}
-        <Text style={[styles.sectionTitle, { color: subtextColor }]}>{labels.notifications}</Text>
-        <View style={[styles.card, { backgroundColor: cardBg }]}>
+        <Text style={[styles.sectionTitle, { color: theme.subtext }]}>{labels.notifications}</Text>
+        <View style={[styles.card, { backgroundColor: theme.card }]}>
           <View style={styles.row}>
             <View style={styles.rowLeft}>
-              <Bell color={textColor} size={22} />
-              <Text style={[styles.rowLabel, { color: textColor }]}>{labels.enableNotifications}</Text>
+              <Bell color={theme.text} size={22} />
+              <Text style={[styles.rowLabel, { color: theme.text }]}>{labels.enableNotifications}</Text>
             </View>
             <Switch
               value={notificationsEnabled}
               onValueChange={setNotificationsEnabled}
-              trackColor={{ false: '#d1d5db', true: GREEK_BLUE }}
+              trackColor={{ false: '#d1d5db', true: COLORS.greekBlue }}
               thumbColor="#fff"
             />
           </View>
@@ -137,8 +124,8 @@ const SettingsScreen = () => {
             <>
               <View style={styles.divider} />
               <View style={styles.row}>
-                <Text style={[styles.notifyHint, { color: subtextColor }]}>
-                  {language === 'el' ? 'Ρυθμίστε πότε θα ειδοποιηθείτε για κάθε αγαπημένο στην καρτέλα Αγαπημένα' : 'Set when to be notified for each favorite in the Favorites tab'}
+                <Text style={[styles.notifyHint, { color: theme.subtext }]}>
+                  {labels.notifyHint}
                 </Text>
               </View>
             </>
@@ -146,12 +133,12 @@ const SettingsScreen = () => {
         </View>
 
         {/* Favorites Section */}
-        <Text style={[styles.sectionTitle, { color: subtextColor }]}>{labels.favorites}</Text>
-        <View style={[styles.card, { backgroundColor: cardBg }]}>
+        <Text style={[styles.sectionTitle, { color: theme.subtext }]}>{labels.favorites}</Text>
+        <View style={[styles.card, { backgroundColor: theme.card }]}>
           <TouchableOpacity style={styles.row} onPress={handleClearFavorites} disabled={favorites.length === 0}>
             <View style={styles.rowLeft}>
-              <Trash2 color={favorites.length > 0 ? '#ef4444' : subtextColor} size={22} />
-              <Text style={[styles.rowLabel, { color: favorites.length > 0 ? '#ef4444' : subtextColor }]}>
+              <Trash2 color={favorites.length > 0 ? '#ef4444' : theme.subtext} size={22} />
+              <Text style={[styles.rowLabel, { color: favorites.length > 0 ? '#ef4444' : theme.subtext }]}>
                 {labels.clearFavorites} ({favorites.length})
               </Text>
             </View>
@@ -159,21 +146,21 @@ const SettingsScreen = () => {
         </View>
 
         {/* About Section */}
-        <Text style={[styles.sectionTitle, { color: subtextColor }]}>{labels.about}</Text>
-        <View style={[styles.card, { backgroundColor: cardBg }]}>
+        <Text style={[styles.sectionTitle, { color: theme.subtext }]}>{labels.about}</Text>
+        <View style={[styles.card, { backgroundColor: theme.card }]}>
           <View style={styles.row}>
             <View style={styles.rowLeft}>
-              <Info color={textColor} size={22} />
-              <Text style={[styles.rowLabel, { color: textColor }]}>{labels.developer}</Text>
+              <Info color={theme.text} size={22} />
+              <Text style={[styles.rowLabel, { color: theme.text }]}>{labels.developer}</Text>
             </View>
-            <Text style={[styles.rowValue, { color: subtextColor }]}>athanasso</Text>
+            <Text style={[styles.rowValue, { color: theme.subtext }]}>athanasso</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.row}>
             <View style={styles.rowLeft}>
-              <Text style={[styles.rowLabel, { color: textColor, marginLeft: 0 }]}>{labels.version}</Text>
+              <Text style={[styles.rowLabel, { color: theme.text, marginLeft: 0 }]}>{labels.version}</Text>
             </View>
-            <Text style={[styles.rowValue, { color: subtextColor }]}>1.1.0</Text>
+            <Text style={[styles.rowValue, { color: theme.subtext }]}>1.1.0</Text>
           </View>
           <View style={styles.divider} />
           <TouchableOpacity 
@@ -181,29 +168,29 @@ const SettingsScreen = () => {
             onPress={() => Linking.openURL('https://github.com/athanasso/eortologio')}
           >
             <View style={styles.rowLeft}>
-              <Github color={textColor} size={22} />
-              <Text style={[styles.rowLabel, { color: textColor }]}>{labels.gitRepo}</Text>
+              <Github color={theme.text} size={22} />
+              <Text style={[styles.rowLabel, { color: theme.text }]}>{labels.gitRepo}</Text>
             </View>
-            <ExternalLink color={subtextColor} size={18} />
+            <ExternalLink color={theme.subtext} size={18} />
           </TouchableOpacity>
         </View>
 
         {/* Credits Section */}
-        <Text style={[styles.sectionTitle, { color: subtextColor }]}>{labels.credits}</Text>
-        <View style={[styles.card, { backgroundColor: cardBg }]}>
+        <Text style={[styles.sectionTitle, { color: theme.subtext }]}>{labels.credits}</Text>
+        <View style={[styles.card, { backgroundColor: theme.card }]}>
           <TouchableOpacity 
             style={styles.row}
             onPress={() => Linking.openURL('https://eortologio.iliasdev.com/docs')}
           >
             <View style={styles.rowLeft}>
-              <Heart color={GREEK_BLUE} size={22} />
-              <Text style={[styles.rowLabel, { color: textColor }]}>{labels.apiCredits}</Text>
+              <Heart color={COLORS.greekBlue} size={22} />
+              <Text style={[styles.rowLabel, { color: theme.text }]}>{labels.apiCredits}</Text>
             </View>
-            <ExternalLink color={subtextColor} size={18} />
+            <ExternalLink color={theme.subtext} size={18} />
           </TouchableOpacity>
         </View>
 
-        <Text style={[styles.footer, { color: subtextColor }]}>
+        <Text style={[styles.footer, { color: theme.subtext }]}>
           Eortologio App © {copyrightYears}
         </Text>
       </ScrollView>
@@ -272,39 +259,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   langButtonActive: {
-    backgroundColor: GREEK_BLUE,
-    borderColor: GREEK_BLUE,
+    backgroundColor: COLORS.greekBlue,
+    borderColor: COLORS.greekBlue,
   },
   langButtonText: {
     fontSize: 15,
     color: '#6b7280',
   },
   langButtonTextActive: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  timingButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    padding: 12,
-    gap: 8,
-  },
-  timingButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-  },
-  timingButtonActive: {
-    backgroundColor: GREEK_BLUE,
-    borderColor: GREEK_BLUE,
-  },
-  timingButtonText: {
-    fontSize: 13,
-    color: '#6b7280',
-  },
-  timingButtonTextActive: {
     color: '#fff',
     fontWeight: '600',
   },

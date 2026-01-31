@@ -1,12 +1,10 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { View, Text, ActivityIndicator, FlatList, StyleSheet } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMonthNameDays } from '../hooks/useNameDays';
 import { useSettings } from '../context/SettingsContext';
-
-const GREEK_BLUE = '#0D5EAF';
-const HOLIDAY_RED = '#dc2626';
+import { COLORS, getThemeColors } from '../constants/theme';
 
 // Configure Greek locale for calendar
 LocaleConfig.locales['el'] = {
@@ -56,18 +54,15 @@ const CalendarScreen = () => {
 
   const { data: monthData, isLoading } = useMonthNameDays(currentMonth);
 
-  const bgColor = isDarkMode ? '#111827' : '#fff';
-  const textColor = isDarkMode ? '#f9fafb' : '#111827';
-  const subtextColor = isDarkMode ? '#9ca3af' : '#6b7280';
-  const cardBg = isDarkMode ? '#1f2937' : '#f3f4f6';
+  const theme = getThemeColors(isDarkMode);
 
-  const labels = {
+  const labels = useMemo(() => ({
     title: language === 'el' ? 'Ημερολόγιο' : 'Calendar',
     noData: language === 'el' ? 'Δεν υπάρχουν στοιχεία.' : 'No data available.',
     noMajor: language === 'el' ? 'Δεν υπάρχουν μεγάλες γιορτές.' : 'No major name days.',
     holidays: language === 'el' ? 'Αργίες' : 'Holidays',
     names: language === 'el' ? 'Ονόματα' : 'Names',
-  };
+  }), [language]);
 
   const markedDates = useMemo(() => {
     if (!monthData) return {};
@@ -85,7 +80,7 @@ const CalendarScreen = () => {
         if (hasHoliday || hasNames) {
             marks[dateKey] = { 
               marked: true, 
-              dotColor: hasHoliday ? HOLIDAY_RED : GREEK_BLUE 
+              dotColor: hasHoliday ? COLORS.holidayRed : COLORS.greekBlue 
             };
         }
     });
@@ -93,7 +88,7 @@ const CalendarScreen = () => {
     marks[selectedDate] = { 
         ...(marks[selectedDate] || {}), 
         selected: true, 
-        selectedColor: GREEK_BLUE 
+        selectedColor: COLORS.greekBlue 
     };
 
     return marks;
@@ -126,7 +121,7 @@ const CalendarScreen = () => {
     return items;
   }, [selectedDayData]);
 
-  const renderItem = ({ item }: { item: ListItem }) => {
+  const renderItem = useCallback(({ item }: { item: ListItem }) => {
     if (item.type === 'holiday') {
       return (
         <View style={styles.holidayItem}>
@@ -135,16 +130,16 @@ const CalendarScreen = () => {
       );
     }
     return (
-      <View style={[styles.nameItem, { backgroundColor: cardBg }]}>
-        <Text style={[styles.nameItemText, { color: textColor }]}>{item.value}</Text>
+      <View style={[styles.nameItem, { backgroundColor: theme.card }]}>
+        <Text style={[styles.nameItemText, { color: theme.text }]}>{item.value}</Text>
       </View>
     );
-  };
+  }, [theme]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.content}>
-        <Text style={[styles.title, { color: textColor }]}>{labels.title}</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{labels.title}</Text>
         
         <Calendar 
             key={`calendar-${calendarKey}-${isDarkMode}`}
@@ -152,17 +147,17 @@ const CalendarScreen = () => {
             onDayPress={(day: any) => setSelectedDate(day.dateString)}
             markedDates={markedDates}
             theme={{
-                backgroundColor: bgColor,
-                calendarBackground: bgColor,
-                textSectionTitleColor: subtextColor,
-                selectedDayBackgroundColor: GREEK_BLUE,
+                backgroundColor: theme.background,
+                calendarBackground: theme.background,
+                textSectionTitleColor: theme.subtext,
+                selectedDayBackgroundColor: COLORS.greekBlue,
                 selectedDayTextColor: '#fff',
-                todayTextColor: GREEK_BLUE,
-                dayTextColor: textColor,
+                todayTextColor: COLORS.greekBlue,
+                dayTextColor: theme.text,
                 textDisabledColor: isDarkMode ? '#4b5563' : '#d1d5db',
-                arrowColor: GREEK_BLUE,
-                monthTextColor: textColor,
-                indicatorColor: GREEK_BLUE,
+                arrowColor: COLORS.greekBlue,
+                monthTextColor: theme.text,
+                indicatorColor: COLORS.greekBlue,
                 textDayFontWeight: '400',
                 textMonthFontWeight: 'bold',
                 textDayHeaderFontWeight: '500',
@@ -174,12 +169,12 @@ const CalendarScreen = () => {
         />
 
         <View style={styles.detailSection}>
-            <Text style={[styles.selectedDateTitle, { color: textColor }]}>
+            <Text style={[styles.selectedDateTitle, { color: theme.text }]}>
                 {new Date(selectedDate).toLocaleDateString(language === 'el' ? 'el-GR' : 'en-US', { day: 'numeric', month: 'long'})}
             </Text>
             
             {isLoading ? (
-                <ActivityIndicator color={GREEK_BLUE} />
+                <ActivityIndicator color={COLORS.greekBlue} />
             ) : listData.length > 0 ? (
                 <FlatList 
                     data={listData}
@@ -189,7 +184,7 @@ const CalendarScreen = () => {
                     contentContainerStyle={{ paddingBottom: 20 }}
                 />
             ) : (
-                <Text style={{ color: subtextColor }}>{labels.noMajor}</Text>
+                <Text style={{ color: theme.subtext }}>{labels.noMajor}</Text>
             )}
         </View>
       </View>
@@ -220,7 +215,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   holidayItem: {
-    backgroundColor: HOLIDAY_RED,
+    backgroundColor: COLORS.holidayRed,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
@@ -236,7 +231,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
     borderLeftWidth: 4,
-    borderLeftColor: GREEK_BLUE,
+    borderLeftColor: COLORS.greekBlue,
   },
   nameItemText: {
     fontWeight: '500',

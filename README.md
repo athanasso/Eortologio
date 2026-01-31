@@ -7,6 +7,8 @@ A React Native app for Greek Name Days (Εορτολόγιο). Find out who is c
 - 📅 **Today's Celebrations** - See who is celebrating today with saints and feast information
 - 🗓️ **Calendar View** - Browse any date to see name days and holidays
 - 🔍 **Name Search** - Find when any Greek name celebrates
+- ❤️ **Favorites** - Save your friends' names and get notified
+- 🔔 **Notifications** - Get alerts for your favorites' name days
 - 🎉 **Holidays** - View Greek national holidays and events (αργίες)
 - 🌙 **Dark Mode** - Full dark theme support
 - 🌍 **Bilingual** - Greek and English language support
@@ -23,6 +25,7 @@ A React Native app for Greek Name Days (Εορτολόγιο). Find out who is c
 - **React Navigation** - Bottom tab navigation
 - **TanStack Query** - Data fetching and caching
 - **AsyncStorage** - Settings persistence
+- **expo-notifications** - Local push notifications
 - **react-native-calendars** - Calendar component
 
 ## Getting Started
@@ -56,7 +59,10 @@ npx expo start
 
 ```
 src/
+├── constants/
+│   └── theme.ts               # Centralized theme & colors
 ├── context/
+│   ├── FavoritesContext.tsx   # Favorites management
 │   └── SettingsContext.tsx    # App settings (theme, language)
 ├── hooks/
 │   └── useNameDays.ts         # React Query hooks for API
@@ -66,9 +72,11 @@ src/
 │   ├── HomeScreen.tsx         # Today's celebrations
 │   ├── CalendarScreen.tsx     # Calendar view
 │   ├── SearchScreen.tsx       # Name search
+│   ├── FavoritesScreen.tsx    # Saved names list
 │   └── SettingsScreen.tsx     # App settings
 └── services/
-    └── api.ts                 # API client
+    ├── api.ts                 # API client
+    └── notifications.ts       # Notification service
 ```
 
 ## API

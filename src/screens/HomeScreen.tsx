@@ -1,26 +1,20 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
 import { useTodayNameDays } from '../hooks/useNameDays';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSettings } from '../context/SettingsContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { Calendar as CalendarIcon, Heart, Star } from 'lucide-react-native';
-
-const GREEK_BLUE = '#0D5EAF';
-const HOLIDAY_RED = '#dc2626';
-const FAVORITE_GOLD = '#f59e0b';
+import { COLORS, getThemeColors } from '../constants/theme';
 
 const HomeScreen = () => {
   const { data, isLoading, error } = useTodayNameDays();
   const { isDarkMode, language } = useSettings();
-  const { favorites, isFavorite } = useFavorites();
+  const { isFavorite } = useFavorites();
 
-  const bgColor = isDarkMode ? '#111827' : '#fff';
-  const textColor = isDarkMode ? '#f9fafb' : '#111827';
-  const subtextColor = isDarkMode ? '#9ca3af' : '#6b7280';
-  const cardBg = isDarkMode ? '#1f2937' : '#f9fafb';
+  const theme = getThemeColors(isDarkMode);
 
-  const labels = {
+  const labels = useMemo(() => ({
     today: language === 'el' ? 'Σήμερα' : 'Today',
     celebrating: language === 'el' ? 'Γιορτάζουν' : 'Celebrating Names',
     noNames: language === 'el' ? 'Δεν γιορτάζει κανείς σήμερα.' : 'No names celebrating today.',
@@ -30,19 +24,19 @@ const HomeScreen = () => {
     loading: language === 'el' ? 'Φόρτωση...' : 'Loading...',
     error: language === 'el' ? 'Αποτυχία φόρτωσης' : 'Failed to load data',
     yourFavorites: language === 'el' ? 'Τα αγαπημένα σου γιορτάζουν!' : 'Your favorites are celebrating!',
-  };
+  }), [language]);
 
   if (isLoading) {
     return (
-      <View style={[styles.centered, { backgroundColor: bgColor }]}>
-        <ActivityIndicator size="large" color={GREEK_BLUE} />
+      <View style={[styles.centered, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={COLORS.greekBlue} />
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={[styles.centered, { backgroundColor: bgColor }]}>
+      <View style={[styles.centered, { backgroundColor: theme.background }]}>
         <Text style={styles.errorText}>{labels.error}</Text>
       </View>
     );
@@ -55,11 +49,11 @@ const HomeScreen = () => {
   const hasCelebratingFavorites = celebratingFavorites.length > 0;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 20 }}>
         <View style={styles.headerSection}>
-            <Text style={[styles.headerTitle, { color: textColor }]}>{labels.today}</Text>
-            <Text style={[styles.headerDate, { color: subtextColor }]}>
+            <Text style={[styles.headerTitle, { color: theme.text }]}>{labels.today}</Text>
+            <Text style={[styles.headerDate, { color: theme.subtext }]}>
               {new Date().toLocaleDateString(language === 'el' ? 'el-GR' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </Text>
         </View>
@@ -110,8 +104,8 @@ const HomeScreen = () => {
             )}
         </View>
 
-        <View style={[styles.saintsCard, { backgroundColor: cardBg }]}>
-             <Text style={[styles.saintsTitle, { color: textColor }]}>{labels.saints}</Text>
+        <View style={[styles.saintsCard, { backgroundColor: theme.card }]}>
+             <Text style={[styles.saintsTitle, { color: theme.text }]}>{labels.saints}</Text>
              {data?.saints.map((saint, index) => (
                  <Text key={index} style={[styles.saintItem, { color: isDarkMode ? '#d1d5db' : '#374151' }]}>• {saint}</Text>
              ))}
@@ -149,7 +143,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   favoritesCard: {
-    backgroundColor: FAVORITE_GOLD,
+    backgroundColor: COLORS.favoriteGold,
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
@@ -182,7 +176,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   holidayCard: {
-    backgroundColor: HOLIDAY_RED,
+    backgroundColor: COLORS.holidayRed,
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
@@ -210,7 +204,7 @@ const styles = StyleSheet.create({
     opacity: 0.95,
   },
   namesCard: {
-    backgroundColor: GREEK_BLUE,
+    backgroundColor: COLORS.greekBlue,
     borderRadius: 16,
     padding: 24,
     marginBottom: 24,

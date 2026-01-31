@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useQueries } from '@tanstack/react-query';
 import { useFavorites, FavoriteItem } from '../context/FavoritesContext';
 import { useSettings } from '../context/SettingsContext';
 import { searchNameDays } from '../services/api';
 import { Trash2, Bell, BellOff, ChevronDown, ChevronUp, Calendar } from 'lucide-react-native';
-
-const GREEK_BLUE = '#0D5EAF';
+import { COLORS, getThemeColors } from '../constants/theme';
 
 interface FavoriteWithDate extends FavoriteItem {
   dateStr?: string;
@@ -16,14 +16,10 @@ const FavoritesScreen = () => {
   const { favorites, removeFavorite, toggleFavoriteNotify, setFavoriteTimings } = useFavorites();
   const { isDarkMode, language, notificationsEnabled } = useSettings();
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
-  const [favoritesWithDates, setFavoritesWithDates] = useState<FavoriteWithDate[]>([]);
 
-  const bgColor = isDarkMode ? '#111827' : '#fff';
-  const textColor = isDarkMode ? '#f9fafb' : '#111827';
-  const subtextColor = isDarkMode ? '#9ca3af' : '#6b7280';
-  const cardBg = isDarkMode ? '#1f2937' : '#f3f4f6';
+  const theme = getThemeColors(isDarkMode);
 
-  const labels = {
+  const labels = useMemo(() => ({
     title: language === 'el' ? 'Αγαπημένα' : 'Favorites',
     empty: language === 'el' ? 'Δεν έχετε αγαπημένα ακόμα.\nΑναζητήστε ένα όνομα και πατήστε το ❤️ για να το προσθέσετε.' : 'No favorites yet.\nSearch for a name and tap ❤️ to add it.',
     deleteConfirm: language === 'el' ? 'Αφαίρεση από αγαπημένα;' : 'Remove from favorites?',
@@ -36,9 +32,9 @@ const FavoritesScreen = () => {
     twoDaysBefore: language === 'el' ? '2 μέρες πριν' : '2 days before',
     threeDaysBefore: language === 'el' ? '3 μέρες πριν' : '3 days before',
     notificationsOff: language === 'el' ? 'Οι ειδοποιήσεις είναι απενεργοποιημένες. Ενεργοποιήστε τες στις Ρυθμίσεις.' : 'Notifications are disabled. Enable them in Settings.',
-  };
+  }), [language]);
 
-  const timingOptions = [
+  const timingOptions = useMemo(() => [
     { value: 0, label: labels.sameDay },
     { value: 1, label: labels.oneDayBefore },
     { value: 2, label: labels.twoDaysBefore },
@@ -46,35 +42,28 @@ const FavoritesScreen = () => {
     { value: 5, label: language === 'el' ? '5 μέρες πριν' : '5 days before' },
     { value: 7, label: language === 'el' ? '1 εβδομάδα πριν' : '1 week before' },
     { value: 14, label: language === 'el' ? '2 εβδομάδες πριν' : '2 weeks before' },
-  ];
+  ], [labels, language]);
 
-  // Fetch celebration dates for all favorites
-  useEffect(() => {
-    const fetchDates = async () => {
-      const updatedFavorites: FavoriteWithDate[] = await Promise.all(
-        favorites.map(async (fav) => {
-          try {
-            const celebrations = await searchNameDays(fav.name);
-            if (celebrations && celebrations.length > 0) {
-              return { ...fav, dateStr: celebrations[0].date_str };
-            }
-          } catch (error) {
-            console.error(`Error fetching date for ${fav.name}:`, error);
-          }
-          return { ...fav };
-        })
-      );
-      setFavoritesWithDates(updatedFavorites);
-    };
+  // Use React Query's useQueries for batch fetching with automatic caching
+  const dateQueries = useQueries({
+    queries: favorites.map((fav) => ({
+      queryKey: ['nameDays', 'search', fav.name],
+      queryFn: () => searchNameDays(fav.name),
+      staleTime: 1000 * 60 * 60 * 24 * 7, // 7 days
+      gcTime: 1000 * 60 * 60 * 24 * 30, // 30 days cache
+    })),
+  });
 
-    if (favorites.length > 0) {
-      fetchDates();
-    } else {
-      setFavoritesWithDates([]);
-    }
-  }, [favorites]);
+  // Merge favorites with their celebration dates
+  const favoritesWithDates = useMemo((): FavoriteWithDate[] => {
+    return favorites.map((fav, index) => {
+      const query = dateQueries[index];
+      const dateStr = query.data?.[0]?.date_str;
+      return { ...fav, dateStr };
+    });
+  }, [favorites, dateQueries]);
 
-  const handleRemove = (name: string) => {
+  const handleRemove = useCallback((name: string) => {
     Alert.alert(
       labels.deleteConfirm,
       name,
@@ -83,9 +72,9 @@ const FavoritesScreen = () => {
         { text: labels.remove, style: 'destructive', onPress: () => removeFavorite(name) },
       ]
     );
-  };
+  }, [labels, removeFavorite]);
 
-  const toggleTiming = (name: string, currentTimings: number[], timing: number) => {
+  const toggleTiming = useCallback((name: string, currentTimings: number[], timing: number) => {
     let newTimings: number[];
     if (currentTimings.includes(timing)) {
       newTimings = currentTimings.filter(t => t !== timing);
@@ -94,20 +83,20 @@ const FavoritesScreen = () => {
       newTimings = [...currentTimings, timing].sort();
     }
     setFavoriteTimings(name, newTimings);
-  };
+  }, [setFavoriteTimings]);
 
   const renderItem = ({ item }: { item: FavoriteWithDate }) => {
     const isExpanded = expandedItem === item.name;
     
     return (
-      <View style={[styles.card, { backgroundColor: cardBg }]}>
+      <View style={[styles.card, { backgroundColor: theme.card }]}>
         <View style={styles.cardHeader}>
           <View style={styles.cardLeft}>
-            <Text style={[styles.nameText, { color: textColor }]}>{item.name}</Text>
+            <Text style={[styles.nameText, { color: theme.text }]}>{item.name}</Text>
             {item.dateStr && (
               <View style={styles.dateRow}>
-                <Calendar color={GREEK_BLUE} size={14} />
-                <Text style={[styles.dateText, { color: GREEK_BLUE }]}>{item.dateStr}</Text>
+                <Calendar color={COLORS.greekBlue} size={14} />
+                <Text style={[styles.dateText, { color: COLORS.greekBlue }]}>{item.dateStr}</Text>
               </View>
             )}
           </View>
@@ -118,14 +107,14 @@ const FavoritesScreen = () => {
                 style={styles.actionButton}
               >
                 {item.notifyEnabled ? (
-                  <Bell color={GREEK_BLUE} size={20} />
+                  <Bell color={COLORS.greekBlue} size={20} />
                 ) : (
-                  <BellOff color={subtextColor} size={20} />
+                  <BellOff color={theme.subtext} size={20} />
                 )}
                 {isExpanded ? (
-                  <ChevronUp color={subtextColor} size={16} />
+                  <ChevronUp color={theme.subtext} size={16} />
                 ) : (
-                  <ChevronDown color={subtextColor} size={16} />
+                  <ChevronDown color={theme.subtext} size={16} />
                 )}
               </TouchableOpacity>
             )}
@@ -138,18 +127,18 @@ const FavoritesScreen = () => {
         {isExpanded && notificationsEnabled && (
           <View style={styles.expandedSection}>
             <View style={styles.notifyRow}>
-              <Text style={[styles.notifyLabel, { color: textColor }]}>{labels.notify}</Text>
+              <Text style={[styles.notifyLabel, { color: theme.text }]}>{labels.notify}</Text>
               <Switch
                 value={item.notifyEnabled}
                 onValueChange={() => toggleFavoriteNotify(item.name)}
-                trackColor={{ false: '#d1d5db', true: GREEK_BLUE }}
+                trackColor={{ false: '#d1d5db', true: COLORS.greekBlue }}
                 thumbColor="#fff"
               />
             </View>
             
             {item.notifyEnabled && (
               <>
-                <Text style={[styles.timingLabel, { color: subtextColor }]}>{labels.notifyWhen}</Text>
+                <Text style={[styles.timingLabel, { color: theme.subtext }]}>{labels.notifyWhen}</Text>
                 <View style={styles.timingButtons}>
                   {timingOptions.map((option) => {
                     const isSelected = item.notifyTimings.includes(option.value);
@@ -175,20 +164,20 @@ const FavoritesScreen = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.content}>
-        <Text style={[styles.title, { color: textColor }]}>{labels.title}</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{labels.title}</Text>
         
         {!notificationsEnabled && favorites.length > 0 && (
           <View style={styles.warningBanner}>
-            <BellOff color="#f59e0b" size={16} />
+            <BellOff color={COLORS.favoriteGold} size={16} />
             <Text style={styles.warningText}>{labels.notificationsOff}</Text>
           </View>
         )}
         
         {favorites.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={[styles.emptyText, { color: subtextColor }]}>{labels.empty}</Text>
+            <Text style={[styles.emptyText, { color: theme.subtext }]}>{labels.empty}</Text>
           </View>
         ) : (
           <FlatList
@@ -246,7 +235,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     padding: 16,
     borderLeftWidth: 4,
-    borderLeftColor: GREEK_BLUE,
+    borderLeftColor: COLORS.greekBlue,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -315,8 +304,8 @@ const styles = StyleSheet.create({
     borderColor: '#d1d5db',
   },
   timingButtonActive: {
-    backgroundColor: GREEK_BLUE,
-    borderColor: GREEK_BLUE,
+    backgroundColor: COLORS.greekBlue,
+    borderColor: COLORS.greekBlue,
   },
   timingButtonText: {
     fontSize: 13,

@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSearchNameDays } from '../hooks/useNameDays';
 import { Search, Heart } from 'lucide-react-native';
 import { useSettings } from '../context/SettingsContext';
 import { useFavorites } from '../context/FavoritesContext';
-
-const GREEK_BLUE = '#0D5EAF';
+import { COLORS, getThemeColors } from '../constants/theme';
 
 const SearchScreen = () => {
   const [query, setQuery] = useState('');
@@ -14,49 +13,41 @@ const SearchScreen = () => {
   const { isDarkMode, language } = useSettings();
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
 
-  const bgColor = isDarkMode ? '#111827' : '#fff';
-  const textColor = isDarkMode ? '#f9fafb' : '#111827';
-  const subtextColor = isDarkMode ? '#9ca3af' : '#6b7280';
-  const cardBg = isDarkMode ? '#1f2937' : '#fff';
-  const inputBg = isDarkMode ? '#374151' : '#f9fafb';
-  const borderColor = isDarkMode ? '#4b5563' : '#d1d5db';
+  const theme = getThemeColors(isDarkMode);
 
-  const getLabels = () => ({
+  const labels = useMemo(() => ({
     title: language === 'el' ? 'Αναζήτηση' : 'Search',
     placeholder: language === 'el' ? 'Αναζήτηση ονόματος...' : 'Search for a name...',
     noResults: language === 'el' ? 'Δεν βρέθηκαν αποτελέσματα για' : 'No results found for',
     also: language === 'el' ? 'Επίσης:' : 'Also:',
     addFav: language === 'el' ? 'Προσθήκη στα αγαπημένα' : 'Add to favorites',
-  });
+  }), [language]);
 
-  const labels = getLabels();
-
-  const handleSearch = () => {
+  const handleSearch = useCallback(() => {
     if (query.trim()) {
-        refetch();
+      refetch();
     }
-  };
+  }, [query, refetch]);
 
-  const toggleFavorite = (name: string) => {
+  const toggleFavorite = useCallback((name: string) => {
     if (isFavorite(name)) {
       removeFavorite(name);
     } else {
       addFavorite(name);
     }
-  };
+  }, [isFavorite, removeFavorite, addFavorite]);
 
-  const renderResultItem = ({ item }: { item: any }) => {
-    const currentLabels = getLabels();
+  const renderResultItem = useCallback(({ item }: { item: any }) => {
     const searchedName = query.trim();
     const isNameFavorite = isFavorite(searchedName);
     
     return (
-      <View style={[styles.resultCard, { backgroundColor: cardBg, borderColor: isDarkMode ? '#374151' : '#f3f4f6' }]}>
+      <View style={[styles.resultCard, { backgroundColor: isDarkMode ? theme.card : '#fff', borderColor: isDarkMode ? '#374151' : '#f3f4f6' }]}>
         <View style={styles.cardHeader}>
           <Text style={styles.resultDate}>{item.date_str}</Text>
           <TouchableOpacity onPress={() => toggleFavorite(searchedName)} style={styles.favoriteButton}>
             <Heart 
-              color={isNameFavorite ? '#ef4444' : subtextColor} 
+              color={isNameFavorite ? '#ef4444' : theme.subtext} 
               fill={isNameFavorite ? '#ef4444' : 'transparent'} 
               size={22} 
             />
@@ -65,10 +56,10 @@ const SearchScreen = () => {
         <Text style={[styles.resultDescription, { color: isDarkMode ? '#d1d5db' : '#4b5563' }]}>{item.saint_description}</Text>
         {item.related_names && item.related_names.length > 0 && (
           <View style={styles.relatedContainer}>
-            <Text style={[styles.relatedNames, { color: subtextColor }]}>{currentLabels.also} </Text>
+            <Text style={[styles.relatedNames, { color: theme.subtext }]}>{labels.also} </Text>
             {item.related_names.map((name: string, idx: number) => (
               <TouchableOpacity key={idx} onPress={() => toggleFavorite(name)} style={styles.relatedNameButton}>
-                <Text style={[styles.relatedNameText, { color: isFavorite(name) ? '#ef4444' : subtextColor }]}>
+                <Text style={[styles.relatedNameText, { color: isFavorite(name) ? '#ef4444' : theme.subtext }]}>
                   {name}{idx < item.related_names.length - 1 ? ', ' : ''}
                 </Text>
               </TouchableOpacity>
@@ -77,37 +68,37 @@ const SearchScreen = () => {
         )}
       </View>
     );
-  };
+  }, [query, isFavorite, toggleFavorite, isDarkMode, theme, labels]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.content}>
-        <Text style={[styles.title, { color: textColor }]}>{labels.title}</Text>
+        <Text style={[styles.title, { color: theme.text }]}>{labels.title}</Text>
         
-        <View style={[styles.searchBox, { backgroundColor: inputBg, borderColor }]}>
-            <Search color={subtextColor} size={20} />
-            <TextInput 
-                style={[styles.searchInput, { color: textColor }]}
-                placeholder={labels.placeholder}
-                placeholderTextColor={subtextColor}
-                value={query}
-                onChangeText={setQuery}
-                onSubmitEditing={handleSearch}
-                returnKeyType="search"
-            />
+        <View style={[styles.searchBox, { backgroundColor: theme.input, borderColor: theme.border }]}>
+          <Search color={theme.subtext} size={20} />
+          <TextInput 
+            style={[styles.searchInput, { color: theme.text }]}
+            placeholder={labels.placeholder}
+            placeholderTextColor={theme.subtext}
+            value={query}
+            onChangeText={setQuery}
+            onSubmitEditing={handleSearch}
+            returnKeyType="search"
+          />
         </View>
 
-        {isLoading && <ActivityIndicator size="large" color={GREEK_BLUE} />}
+        {isLoading && <ActivityIndicator size="large" color={COLORS.greekBlue} />}
 
         {isFetched && data?.length === 0 && (
-             <Text style={[styles.noResults, { color: subtextColor }]}>{labels.noResults} "{query}"</Text>
+          <Text style={[styles.noResults, { color: theme.subtext }]}>{labels.noResults} "{query}"</Text>
         )}
 
         <FlatList 
-            data={data}
-            extraData={[language, query]}
-            keyExtractor={(item, index) => `${item.date_str}-${index}`}
-            renderItem={renderResultItem}
+          data={data}
+          extraData={[language, query]}
+          keyExtractor={(item, index) => `${item.date_str}-${index}`}
+          renderItem={renderResultItem}
         />
       </View>
     </SafeAreaView>
@@ -151,7 +142,7 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderLeftWidth: 4,
-    borderLeftColor: GREEK_BLUE,
+    borderLeftColor: COLORS.greekBlue,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -165,7 +156,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   resultDate: {
-    color: GREEK_BLUE,
+    color: COLORS.greekBlue,
     fontWeight: 'bold',
     fontSize: 18,
   },
